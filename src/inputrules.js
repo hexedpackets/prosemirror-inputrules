@@ -20,9 +20,10 @@ export class InputRule {
   // as well as the start and end of the matched range, and which can
   // return a [transaction](#state.Transaction) that describes the
   // rule's effect, or null to indicate the input was not handled.
-  constructor(match, handler) {
+  constructor(match, handler, opts) {
     this.match = match
     this.handler = typeof handler == "string" ? stringHandler(handler) : handler
+    this.opts = opts || {preventDefault: true}
   }
 }
 
@@ -85,12 +86,14 @@ function run(view, from, to, text, rules, plugin) {
   if ($from.parent.type.spec.code) return false
   let textBefore = $from.parent.textBetween(Math.max(0, $from.parentOffset - MAX_MATCH), $from.parentOffset,
                                             null, "\ufffc") + text
+
   for (let i = 0; i < rules.length; i++) {
-    let match = rules[i].match.exec(textBefore)
-    let tr = match && rules[i].handler(state, match, from - (match[0].length - text.length), to)
+    let rule = rules[i]
+    let match = rule.match.exec(textBefore)
+    let tr = match && rule.handler(state, match, from - (match[0].length - text.length), to)
     if (!tr) continue
     view.dispatch(tr.setMeta(plugin, {transform: tr, from, to, text}))
-    return true
+    return rule.opts.preventDefault
   }
   return false
 }
